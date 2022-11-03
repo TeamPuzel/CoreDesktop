@@ -1,0 +1,9 @@
+module X11 [system] {
+    module Xlib {
+        header "/usr/include/X11/Xlib.h"
+    }
+    module X {
+        header "/usr/include/X11/X.h"
+    }
+    link "X11"
+}
