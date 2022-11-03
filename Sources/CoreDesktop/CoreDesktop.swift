@@ -17,7 +17,7 @@ public struct Main {
 }
 
 struct DisplayManager {
-    private let displayPointer: OpaquePointer
+    let displayPointer: OpaquePointer
     let rootWindow: Window
     init() { displayPointer = XOpenDisplay(nil); rootWindow = XDefaultRootWindow(displayPointer) }
     
