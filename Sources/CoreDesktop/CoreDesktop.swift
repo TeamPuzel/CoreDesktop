@@ -9,7 +9,8 @@ public struct Main {
         displayManager.tryBecomeManager()
         
         // Start the event loop
-        EventLoop().run(&displayManager)
+        var eventLoop = EventLoop()
+        eventLoop.run(&displayManager)
         
         // End the session
         displayManager.end()
