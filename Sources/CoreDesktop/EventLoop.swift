@@ -7,48 +7,44 @@ struct EventLoop {
             let event = getNextEvent(displayManager.displayPointer)
             
             switch event.type {
-                case MapNotify:
-                    handleMap(event.xmap)
-                case UnmapNotify:
-                    handleUnmap(event.xunmap)
-                case EnterNotify:
-                    print("Enter notify unhandled")
-                    break // ???
-                case LeaveNotify:
-                    print("Leave notify unhandled")
-                    break // ???
-                case CreateNotify:
-                    handleCreate(event.xcreatewindow)
-                case DestroyNotify:
-                    handleDestroy(event.xdestroywindow)
-                case KeymapNotify:
-                    handleKeymap(event.xkeymap)
-                case MotionNotify:
-                    handleMotion(event.xmotion)
-                case GravityNotify:
-                    handleGravity(event.xgravity)
-                case MappingNotify:
-                    handleMapping(event.xmapping)
-                case ColormapNotify:
-                    handleColormap(event.xcolormap)
-                case PropertyNotify:
-                    handleProperty(event.xproperty)
-                case ReparentNotify:
-                    handleReparent(event.xreparent)
-                case CirculateNotify:
-                    handleCirculate(event.xcirculate) // More of these?
-                case ConfigureNotify:
-                    handleConfigure(event.xconfigure) // More of these?
-                case SelectionNotify:
-                    handleSelection(event.xselection) // More of these?
-                case VisibilityNotify:
-                    handleVisibility(event.xvisibility)
+                case ConfigureRequest:
+                    handleConfigureRequest(event.xconfigurerequest, &displayManager)
+                case MapRequest:
+                    handleMapRequest(event.xmaprequest, &displayManager)
                 default:
-                    print("Unknown event unhandled: \(event.type)")
+                    print("Unsupported event not handled: \(event.type)")
             }
         }
     }
-    private func handleMap(_ event: XMapEvent) {  }
+    
+    // Configure a window as requested
+    private func handleConfigureRequest(_ event: XConfigureRequestEvent, _ displayManager: inout DisplayManager) { 
+        var windowChanges = XWindowChanges(
+            x: event.x, y: event.y, 
+            width: event.width, height: event.height, 
+            border_width: event.border_width, sibling: event.window, 
+            stack_mode: event.detail)
+        XConfigureWindow(displayManager.displayPointer, event.window, UInt32(event.value_mask), &windowChanges)
+    }
+    
+    // Create window decorations
+    private func handleMapRequest(_ event: XMapRequestEvent, _ displayManager: inout DisplayManager) { 
+        decorateWindow(event.window, &displayManager)
+        XMapWindow(displayManager.displayPointer, event.window)
+    }
+    static let BORDER_WIDTH = 1
+    static let 
+    private func decorateWindow(_ window: Window, _ displayManager: inout DisplayManager) {
+        var windowAttributes: XWindowAttributes!
+        XGetWindowAttributes(displayManager.displayPointer, window, &windowAttributes)
+        
+        let windowFrame = XCreateSimpleWindow(
+            displayManager.displayPointer, displayManager.rootWindow, 
+            windowAttributes.x, windowAttributes.y,
+            UInt32(windowAttributes.width), UInt32(windowAttributes.height),
+            UInt32, UInt, UInt)
+    }
+    
     private func handleUnmap(_ event: XUnmapEvent) {  }
     private func handleEnter(_ event: XEnterWindowEvent) {  }
     private func handleLeave(_ event: XLeaveWindowEvent) {  }
@@ -62,7 +58,6 @@ struct EventLoop {
     private func handleProperty(_ event: XPropertyEvent) {  }
     private func handleReparent(_ event: XReparentEvent) {  }
     private func handleCirculate(_ event: XCirculateEvent) {  }
-    private func handleConfigure(_ event: XConfigureEvent) {  }
     private func handleSelection(_ event: XSelectionEvent) {  }
     private func handleVisibility(_ event: XVisibilityEvent) {  }
 }

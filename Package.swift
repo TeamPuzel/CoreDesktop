@@ -4,6 +4,9 @@ import PackageDescription
 
 let package = Package(
     name: "CoreDesktop",
+    products: [
+        .executable(name: "com.teampuzel.coredesktop", targets: ["CoreDesktop"])
+    ],
     dependencies: [],
     targets: [
         .executableTarget(
