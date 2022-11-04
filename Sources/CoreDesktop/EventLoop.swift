@@ -2,7 +2,9 @@
 import X11
 
 struct EventLoop {
-    func run(_ displayManager: inout DisplayManager) {
+    var clientWindows: [Window] = []
+    
+    mutating func run(_ displayManager: inout DisplayManager) {
         while true {
             let event = getNextEvent(displayManager.displayPointer)
             
@@ -11,8 +13,15 @@ struct EventLoop {
                     handleConfigureRequest(event.xconfigurerequest, &displayManager)
                 case MapRequest:
                     handleMapRequest(event.xmaprequest, &displayManager)
+                case UnmapNotify:
+                    handleUnmapNotify(event.xunmap, &displayManager)
+                case ReparentNotify:
+                    break
+                case DestroyNotify:
+                    break
                 default:
-                    print("Unsupported event not handled: \(event.type)")
+                    break
+                    // print("Unsupported event not handled: \(event.type)")
             }
         }
     }
@@ -28,13 +37,14 @@ struct EventLoop {
     }
     
     // Create window decorations
-    private func handleMapRequest(_ event: XMapRequestEvent, _ displayManager: inout DisplayManager) { 
+    private mutating func handleMapRequest(_ event: XMapRequestEvent, _ displayManager: inout DisplayManager) { 
         decorateWindow(event.window, &displayManager)
         XMapWindow(displayManager.displayPointer, event.window)
     }
-    static let BORDER_WIDTH = 1
-    static let 
-    private func decorateWindow(_ window: Window, _ displayManager: inout DisplayManager) {
+    let FRAME_BORDER_WIDTH: UInt32 = 1
+    let FRAME_BORDER_COLOR: UInt = 0xffffff
+    let FRAME_BG_COLOR: UInt = 0x000000
+    private mutating func decorateWindow(_ window: Window, _ displayManager: inout DisplayManager) {
         var windowAttributes: XWindowAttributes!
         XGetWindowAttributes(displayManager.displayPointer, window, &windowAttributes)
         
@@ -42,24 +52,25 @@ struct EventLoop {
             displayManager.displayPointer, displayManager.rootWindow, 
             windowAttributes.x, windowAttributes.y,
             UInt32(windowAttributes.width), UInt32(windowAttributes.height),
-            UInt32, UInt, UInt)
+            FRAME_BORDER_WIDTH, FRAME_BORDER_COLOR, FRAME_BG_COLOR)
+            
+        XSelectInput(displayManager.displayPointer, windowFrame, SubstructureRedirectMask | SubstructureNotifyMask)
+        XAddToSaveSet(displayManager.displayPointer, window)
+        XReparentWindow(displayManager.displayPointer, window, windowFrame, 0, 0)
+        XMapWindow(displayManager.displayPointer, windowFrame)
+        clientWindows.append(windowFrame)
     }
     
-    private func handleUnmap(_ event: XUnmapEvent) {  }
-    private func handleEnter(_ event: XEnterWindowEvent) {  }
-    private func handleLeave(_ event: XLeaveWindowEvent) {  }
-    private func handleCreate(_ event: XCreateWindowEvent) {  }
-    private func handleDestroy(_ event: XDestroyWindowEvent) {  }
-    private func handleKeymap(_ event: XKeymapEvent) {  }
-    private func handleMotion(_ event: XMotionEvent) {  }
-    private func handleGravity(_ event: XGravityEvent) {  }
-    private func handleMapping(_ event: XMappingEvent) {  }
-    private func handleColormap(_ event: XColormapEvent) {  }
-    private func handleProperty(_ event: XPropertyEvent) {  }
-    private func handleReparent(_ event: XReparentEvent) {  }
-    private func handleCirculate(_ event: XCirculateEvent) {  }
-    private func handleSelection(_ event: XSelectionEvent) {  }
-    private func handleVisibility(_ event: XVisibilityEvent) {  }
+    private mutating func handleUnmapNotify(_ event: XUnmapEvent, _ displayManager: inout DisplayManager) {
+        if clientWindows.contains(event.window) {
+            XUnmapWindow(displayManager.displayPointer, clientWindows[Int(event.window)])
+            XReparentWindow(displayManager.displayPointer, event.window, displayManager.rootWindow, 0, 0)
+            XRemoveFromSaveSet(displayManager.displayPointer, event.window)
+            XDestroyWindow(displayManager.displayPointer, clientWindows[Int(event.window)])
+            let index = clientWindows.firstIndex(of: event.window)
+            clientWindows.remove(at: index!)
+        }
+    }
 }
 
 @inline(__always)
